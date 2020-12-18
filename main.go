@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -31,8 +30,7 @@ func main() {
 		Email: "john.doe@mail.com",
 	}
 
-	// The query generated does not return the id for postgres driver.
-	if err := p.Insert(db); err != nil && !errors.Is(sql.ErrNoRows, err) {
+	if err := p.Insert(db); err != nil {
 		log.Printf("%+v\n", p)
 		log.Fatal("insertError:", err)
 	}

@@ -5,7 +5,6 @@ package models
 
 import (
 	"errors"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -16,8 +15,6 @@ type Person struct {
 	ID        uuid.UUID   `json:"id"`         // id
 	Name      string      `json:"name"`       // name
 	Email     string      `json:"email"`      // email
-	CreatedAt time.Time   `json:"created_at"` // created_at
-	UpdatedAt time.Time   `json:"updated_at"` // updated_at
 	DeletedAt pq.NullTime `json:"deleted_at"` // deleted_at
 
 	// xo fields
@@ -45,14 +42,15 @@ func (p *Person) Insert(db XODB) error {
 
 	// sql insert query, primary key must be provided
 	const sqlstr = `INSERT INTO public.person (` +
-		`id, name, email, created_at, updated_at, deleted_at` +
+		`id, name, email, deleted_at` +
 		`) VALUES (` +
-		`$1, $2, $3, $4, $5, $6` +
-		`)`
+		`$1, $2, $3, $4` +
+		`)` +
+		`RETURNING id`
 
 	// run query
-	XOLog(sqlstr, p.ID, p.Name, p.Email, p.CreatedAt, p.UpdatedAt, p.DeletedAt)
-	err = db.QueryRow(sqlstr, p.ID, p.Name, p.Email, p.CreatedAt, p.UpdatedAt, p.DeletedAt).Scan(&p.ID)
+	XOLog(sqlstr, p.ID, p.Name, p.Email, p.DeletedAt)
+	err = db.QueryRow(sqlstr, p.ID, p.Name, p.Email, p.DeletedAt).Scan(&p.ID)
 	if err != nil {
 		return err
 	}
@@ -79,14 +77,14 @@ func (p *Person) Update(db XODB) error {
 
 	// sql query
 	const sqlstr = `UPDATE public.person SET (` +
-		`name, email, created_at, updated_at, deleted_at` +
+		`name, email, deleted_at` +
 		`) = ( ` +
-		`$1, $2, $3, $4, $5` +
-		`) WHERE id = $6`
+		`$1, $2, $3` +
+		`) WHERE id = $4`
 
 	// run query
-	XOLog(sqlstr, p.Name, p.Email, p.CreatedAt, p.UpdatedAt, p.DeletedAt, p.ID)
-	_, err = db.Exec(sqlstr, p.Name, p.Email, p.CreatedAt, p.UpdatedAt, p.DeletedAt, p.ID)
+	XOLog(sqlstr, p.Name, p.Email, p.DeletedAt, p.ID)
+	_, err = db.Exec(sqlstr, p.Name, p.Email, p.DeletedAt, p.ID)
 	return err
 }
 
@@ -112,18 +110,18 @@ func (p *Person) Upsert(db XODB) error {
 
 	// sql query
 	const sqlstr = `INSERT INTO public.person (` +
-		`id, name, email, created_at, updated_at, deleted_at` +
+		`id, name, email, deleted_at` +
 		`) VALUES (` +
-		`$1, $2, $3, $4, $5, $6` +
+		`$1, $2, $3, $4` +
 		`) ON CONFLICT (id) DO UPDATE SET (` +
-		`id, name, email, created_at, updated_at, deleted_at` +
+		`id, name, email, deleted_at` +
 		`) = (` +
-		`EXCLUDED.id, EXCLUDED.name, EXCLUDED.email, EXCLUDED.created_at, EXCLUDED.updated_at, EXCLUDED.deleted_at` +
+		`EXCLUDED.id, EXCLUDED.name, EXCLUDED.email, EXCLUDED.deleted_at` +
 		`)`
 
 	// run query
-	XOLog(sqlstr, p.ID, p.Name, p.Email, p.CreatedAt, p.UpdatedAt, p.DeletedAt)
-	_, err = db.Exec(sqlstr, p.ID, p.Name, p.Email, p.CreatedAt, p.UpdatedAt, p.DeletedAt)
+	XOLog(sqlstr, p.ID, p.Name, p.Email, p.DeletedAt)
+	_, err = db.Exec(sqlstr, p.ID, p.Name, p.Email, p.DeletedAt)
 	if err != nil {
 		return err
 	}
@@ -172,7 +170,7 @@ func PersonByEmail(db XODB, email string) (*Person, error) {
 
 	// sql query
 	const sqlstr = `SELECT ` +
-		`id, name, email, created_at, updated_at, deleted_at ` +
+		`id, name, email, deleted_at ` +
 		`FROM public.person ` +
 		`WHERE email = $1`
 
@@ -182,7 +180,7 @@ func PersonByEmail(db XODB, email string) (*Person, error) {
 		_exists: true,
 	}
 
-	err = db.QueryRow(sqlstr, email).Scan(&p.ID, &p.Name, &p.Email, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt)
+	err = db.QueryRow(sqlstr, email).Scan(&p.ID, &p.Name, &p.Email, &p.DeletedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +196,7 @@ func PersonByID(db XODB, id uuid.UUID) (*Person, error) {
 
 	// sql query
 	const sqlstr = `SELECT ` +
-		`id, name, email, created_at, updated_at, deleted_at ` +
+		`id, name, email, deleted_at ` +
 		`FROM public.person ` +
 		`WHERE id = $1`
 
@@ -208,7 +206,7 @@ func PersonByID(db XODB, id uuid.UUID) (*Person, error) {
 		_exists: true,
 	}
 
-	err = db.QueryRow(sqlstr, id).Scan(&p.ID, &p.Name, &p.Email, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt)
+	err = db.QueryRow(sqlstr, id).Scan(&p.ID, &p.Name, &p.Email, &p.DeletedAt)
 	if err != nil {
 		return nil, err
 	}
